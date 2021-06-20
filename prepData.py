@@ -8,17 +8,13 @@ shapeClass = {
     "Triangle" : 1,
     "Square" : 2,
     "Pentagon" : 3,
-    "Star" : 4,
-    "Hexagon" : 5,
-    "Heptagon" : 6,
-    "Octagon" : 7,
-    "Nonagon" : 8
+    "Star" : 4
 }
 
 f = open('shape_data.csv', 'w')
 writer = csv.writer(f)
 
-for filename in os.listdir('./output/'):
+for filename in os.listdir('./greyscale/'):
     shapeName = filename[:filename.find('_')]
     shapeNr = shapeClass[shapeName]
     row = [filename, shapeNr]

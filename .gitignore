@@ -3,3 +3,4 @@
 ./output/*
 *.ipynb
 *.ipynb_checkpoints/
+./greyscale/

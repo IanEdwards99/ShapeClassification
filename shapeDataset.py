@@ -3,6 +3,8 @@
 
 import os
 import pandas as pd
+from PIL import Image
+from numpy import asarray
 import torch
 from torch.utils.data import Dataset
 from skimage import io
@@ -14,11 +16,11 @@ class shapeDataset(Dataset):
         self.transform = transform
 
     def __len__(self):
-        return len(self.annotations) #10 000
+        return len(self.annotations) #49999
 
     def __getitem__(self, index):
         path = os.path.join(self.rootdir, self.annotations.iloc[index, 0])
-        img = io.imread(path)
+        img = Image.open(path)
         y_label = torch.tensor(int(self.annotations.iloc[index, 1]))
 
         if self.transform:
