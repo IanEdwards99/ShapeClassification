@@ -1,0 +1,9 @@
+matplotlib
+torch
+Pillow
+torchvision
+numpy
+sklearn
+pandas
+python3-tk
+sklearn
