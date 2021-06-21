@@ -20,6 +20,7 @@ import ast
 import sys
 import argparse
 from shapeDataset import shapeDataset
+import time
 
 text = "Shape classification Neural Network (CNN)."
 parser = argparse.ArgumentParser(description=text) #setup argument parser.
@@ -33,7 +34,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 #Hyperparameters
 if args.batchsize == None:
-    BATCH_SIZE = 32
+    BATCH_SIZE = 64
 else:
     BATCH_SIZE = args.batchsize
 if args.epochs == None:
@@ -70,19 +71,19 @@ class Net(nn.Module):
         # create 6, 5x5 kernels
         # Pytorch does valid padding by default. 
         
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels = 6, kernel_size = 3)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels = 6, kernel_size = 5)
 
         # 2x2 max-pooling 
         self.pool = nn.MaxPool2d(2, 2)        
         # 6, 25x25 feature maps going out of the pooling stage 
         
-        self.conv2 = nn.Conv2d(in_channels=6, out_channels = 6, kernel_size = 3)
+        self.conv2 = nn.Conv2d(in_channels=6, out_channels = 6, kernel_size = 5)
         # output 16, 20x20 feature maps
-        self.conv3 = nn.Conv2d(in_channels=6, out_channels = 16, kernel_size = 3)
+        self.conv3 = nn.Conv2d(in_channels=6, out_channels = 16, kernel_size = 5)
         # there will be another pooling stage in the forward pass before fc1
         # output 16, 10x10 feature maps 
         
-        self.fc1 = nn.Linear(16 * 23*23, 120)
+        self.fc1 = nn.Linear(16 * 21 * 21, 120)
         self.fc2 = nn.Linear(120, 32)
         self.fc3 = nn.Linear(32, 5)
 
@@ -119,6 +120,7 @@ def evaluate(loader):
     return running_loss / len(loader), correct / total
 
 def train():
+    start_time = time.time()
     running_loss = 0.0
     total = 0.0
 
@@ -145,8 +147,8 @@ def train():
             running_loss += loss.item()
             
             # log results
-            if i % 100 == 9:    # log every 100 mini-batches
-                mean_loss = running_loss / 100 
+            if i % 50 == 9:    # log every 100 mini-batches
+                mean_loss = running_loss / 50 
                 
                 _, predicted = torch.max(outputs.data, 1)
                 correct = (predicted == labels).sum().item()
@@ -166,6 +168,7 @@ def train():
                 print("validation loss: {} validation accuracy: {}\n".format(mean_loss, val_acc))
 
     print('Finished Training')
+    print("--- %s seconds ---" % (time.time() - start_time))
     saveHistory()
     torch.save(model, modelSaveName) 
 
@@ -246,8 +249,8 @@ def loadHistory(path='./historyData.txt', data=history):
 #Load in the data - needed for training, validation or testing.
 dataset = shapeDataset(csvfile = 'shape_data.csv', rootdir = './greyscale/',  
     transform = transforms.ToTensor())
-train_set, test_set = torch.utils.data.random_split(dataset, [53321, 1000])
-train_set, val_set = torch.utils.data.random_split(train_set, [48321, 5000])
+train_set, test_set = torch.utils.data.random_split(dataset, [52321, 2000])
+train_set, val_set = torch.utils.data.random_split(train_set, [50321, 2000])
 train_loader = DataLoader(dataset=train_set, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(dataset=val_set, batch_size=BATCH_SIZE, shuffle=True)
 test_loader = DataLoader(dataset=test_set, batch_size=BATCH_SIZE, shuffle=True)
