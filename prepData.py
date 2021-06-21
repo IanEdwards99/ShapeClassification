@@ -8,7 +8,10 @@ shapeClass = {
     "Triangle" : 1,
     "Square" : 2,
     "Pentagon" : 3,
-    "Star" : 4
+    "Star" : 4,
+    "circle" : 0,
+    "square" : 2,
+    "triangle" : 1
 }
 
 f = open('shape_data.csv', 'w')

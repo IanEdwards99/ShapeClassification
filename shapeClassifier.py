@@ -1,6 +1,8 @@
 #Author: Ian Edwards
 #Date: 18/06/2021
-#Description: CNN Shape classifier 
+#Description: CNN Shape classifier to train on and classify squares, circles, triangles, stars and pentagons.
+
+#Necessary libraries:
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -12,23 +14,38 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import SubsetRandomSampler
 from PIL import Image
-
+from sklearn.metrics import confusion_matrix
+import os
+import ast
+import sys
+import argparse
 from shapeDataset import shapeDataset
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') #Use GPU instead of CPU.
+#Use GPU instead of CPU - makes the training a lot faster.
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') 
 
-#HyperparametersL
+#Hyperparameters
 BATCH_SIZE = 32
 MAX_EPOCHS = 20
 learning_rate = 0.001
+modelSaveName = './shapeClassifierModel.pt'
 
-#Load in the data
-dataset = shapeDataset(csvfile = 'shape_data.csv', rootdir = './greyscale/',  
-    transform = transforms.ToTensor())
-train_set, test_set = torch.utils.data.random_split(dataset, [48999, 1000])
-train_set, val_set = torch.utils.data.random_split(train_set, [43999, 5000])
-train_loader = DataLoader(dataset=train_set, batch_size=BATCH_SIZE, shuffle=True)
-val_loader = DataLoader(dataset=val_set, batch_size=BATCH_SIZE, shuffle=True)
+#Record data
+history = {
+        'train_loss': [],
+        'train_acc': [],
+        'val_loss': [],
+        'val_acc': [],
+}
+
+#Shape classifications
+shapeClass = {
+    0 : "Circle",
+    1 : "Triangle",
+    2 : "Square",
+    3 : "Pentagon",
+    4 : "Star"
+}
 
 class Net(nn.Module):
     def __init__(self):
@@ -50,7 +67,7 @@ class Net(nn.Module):
         # output 16, 10x10 feature maps 
         
         self.fc1 = nn.Linear(16 * 23*23, 120)
-        self.fc2 = nn.Linear(84, 32)
+        self.fc2 = nn.Linear(120, 32)
         self.fc3 = nn.Linear(32, 5)
 
     def forward(self, input):
@@ -62,10 +79,6 @@ class Net(nn.Module):
         output = F.relu(self.fc2(output))
         output = self.fc3(output)
         return output
-
-model = Net().to(device)
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 def evaluate(model, loader):
     model.eval()
@@ -89,109 +102,169 @@ def evaluate(model, loader):
     # Return mean loss, accuracy
     return running_loss / len(loader), correct / total
 
-history = {
-        'train_loss': [],
-        'train_acc': [],
-        'val_loss': [],
-        'val_acc': [],
-}
+def train(model):
+    running_loss = 0.0
+    total = 0.0
 
-running_loss = 0.0
-total = 0.0
+    for epoch in range(MAX_EPOCHS):  # loop over the dataset multiple times
+        print("Starting Epoch: {}".format(epoch+1))    
+        for i, data in enumerate(train_loader, 0):
+            model.train()
+            
+            # get the inputs; data is a list of [inputs, labels]
+            inputs, labels = data
+            inputs = inputs.to(device)
+            labels = labels.to(device)
 
-for epoch in range(MAX_EPOCHS):  # loop over the dataset multiple times
-    print("Starting Epoch: {}".format(epoch+1))    
-    for i, data in enumerate(train_loader, 0):
-        model.train()
+            # zero the parameter gradients
+            optimizer.zero_grad()
+
+            # forward + backward + optimize
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+            # keep record of loss across mini-batches until logged
+            running_loss += loss.item()
+            
+            # log results
+            if i % 100 == 9:    # log every 100 mini-batches
+                mean_loss = running_loss / 10 
+                
+                _, predicted = torch.max(outputs.data, 1)
+                correct = (predicted == labels).sum().item()
+                train_acc = correct / labels.size(0)
+                
+                history['train_loss'].append(mean_loss)
+                history['train_acc'].append(train_acc)
+                
+                print('# mini-batch {}\ntrain loss: {} train accuracy: {}'.format(
+                    i + 1, mean_loss, train_acc))
+                running_loss = 0.0
+                
+                # evaluate on validation dataset
+                mean_loss, val_acc = evaluate(model, val_loader)
+                history['val_loss'].append(mean_loss)
+                history['val_acc'].append(val_acc)
+                print("validation loss: {} validation accuracy: {}\n".format(mean_loss, val_acc))
+
+    print('Finished Training')
+    saveHistory()
+    torch.save(model, modelSaveName) 
+
+def plotData():
+    fig = plt.figure(figsize=(8,8))
+    plt.plot(history['train_loss'], label='train_loss')
+    plt.plot(history['val_loss'], label='val_loss')
+    plt.xlabel("Logging iterations")
+    plt.ylabel("Cross-entropy Loss")
+    plt.legend()
+    plt.show()
+
+    fig = plt.figure(figsize=(8,8))
+    plt.plot(history['train_acc'], label='train_acc')
+    plt.plot(history['val_acc'], label='val_acc')
+    plt.xlabel("Logging iterations")
+    plt.ylabel("Accuracy")
+    plt.legend()
+    plt.show()
+
+def plotConfusionMatrix():
+    # In this case we know there will only be one batch consisting of the entire test set
+    it = iter(test_loader)
+    x, y = next(it)
+
+    outputs = model(x)
+    _, y_pred = torch.max(outputs, 1)
+
+    cm = confusion_matrix(y.numpy(), y_pred.numpy())
+    np.set_printoptions(precision=4)
+    print(cm)
+
+    plt.figure(figsize = (10,10))
+    cm = confusion_matrix(y.numpy(), y_pred.numpy(), normalize="true")
+    plt.matshow(cm, fignum=1)
+
+    for (i, j), z in np.ndenumerate(cm):
+        plt.text(j, i, '{:0.3f}'.format(z), ha='center', va='center')
         
-        # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data
-        inputs = inputs.to(device)
-        labels = labels.to(device)
+    plt.xticks(range(8))
+    plt.yticks(range(8))
+    plt.xlabel("Prediction")
+    plt.ylabel("True")
 
-        # zero the parameter gradients
-        optimizer.zero_grad()
+    # We can retrieve the categories used by the LabelEncoder
+    classes = val_set.enc.classes_.tolist()
+    plt.gca().set_xticklabels(classes)
+    plt.gca().set_yticklabels(classes)
 
-        # forward + backward + optimize
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+    plt.title("Normalized Confusion Matrix")
+    plt.colorbar()
+    plt.show()
 
-        # keep record of loss across mini-batches until logged
-        running_loss += loss.item()
-        
-        # log results
-        if i % 100 == 9:    # log every 10 mini-batches
-            mean_loss = running_loss / 10 
-            
-            _, predicted = torch.max(outputs.data, 1)
-            correct = (predicted == labels).sum().item()
-            train_acc = correct / labels.size(0)
-            
-            history['train_loss'].append(mean_loss)
-            history['train_acc'].append(train_acc)
-            
-            
-            print('# mini-batch {}\ntrain loss: {} train accuracy: {}'.format(
-                  i + 1, mean_loss, train_acc))
-            running_loss = 0.0
-            
-            # evaluate on validation dataset
-            mean_loss, val_acc = evaluate(model, val_loader)
-            history['val_loss'].append(mean_loss)
-            history['val_acc'].append(val_acc)
-                  
-            print("validation loss: {} validation accuracy: {}\n".format(mean_loss, val_acc))
+def checkImage(path, model):
+    img = Image.open(path)
+    preprocess = transforms.Compose([transforms.ToTensor()])
+    img = preprocess(img)
+    img = img.unsqueeze(0)
+    img = img.to(device)
+    output = model(img)
+    _, predicted = torch.max(output.data, 1)
+    return shapeClass[predicted.cpu().detach().numpy()[0]]
 
-print('Finished Training')
-torch.save(model, './my_mnist_model.pt') 
+def saveHistory(path='historyData.txt', data=history):
+    with open(path, 'w') as f:
+        print(history, file=f)
 
-# fig = plt.figure(figsize=(8,8))
-# plt.plot(history['train_loss'], label='train_loss')
-# plt.plot(history['val_loss'], label='val_loss')
-# plt.xlabel("Logging iterations")
-# plt.ylabel("Cross-entropy Loss")
-# plt.legend()
-# plt.show()
+def loadHistory(path='historyData.txt', data=history):
+    file = open(path, "r")
+    contents = file.read()
+    history = ast.literal_eval(contents)
+    file.close()
 
-# fig = plt.figure(figsize=(8,8))
-# plt.plot(history['train_acc'], label='train_acc')
-# plt.plot(history['val_acc'], label='val_acc')
-# plt.xlabel("Logging iterations")
-# plt.ylabel("Accuracy")
-# plt.legend()
-# plt.show()
 
-# from sklearn.metrics import confusion_matrix
-# # In this case we know there will only be one batch consisting of the entire test set
-# it = iter(val_loader)
-# x, y = next(it)
+#Load in the data - needed for training, validation or testing.
+dataset = shapeDataset(csvfile = 'shape_data.csv', rootdir = './greyscale/',  
+    transform = [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+train_set, test_set = torch.utils.data.random_split(dataset, [48999, 1000])
+train_set, val_set = torch.utils.data.random_split(train_set, [43999, 5000])
+train_loader = DataLoader(dataset=train_set, batch_size=BATCH_SIZE, shuffle=True)
+val_loader = DataLoader(dataset=val_set, batch_size=BATCH_SIZE, shuffle=True)
+test_loader = DataLoader(dataset=test_set, batch_size=BATCH_SIZE, shuffle=True)
 
-# outputs = model(x)
-# _, y_pred = torch.max(outputs, 1)
+#Use cross entropy loss function
+criterion = nn.CrossEntropyLoss()
+#Use Adam optimizer
+optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# cm = confusion_matrix(y.numpy(), y_pred.numpy())
-# np.set_printoptions(precision=4)
-# print(cm)
+option = input("Please choose a number from below:\n1 : Train model\n2 : Statistics\n3 : Evaluate\n4 : Exit program")
+while (option != '4'):
+    if option == '1':
+        #modelSaveName = input("Please enter a name for the model (for saving)") --> customize saving model name
+        model = Net().to(device)
+        train(model)
+    elif (option == '2' or option == '3'):
+        if (os.path.isfile(modelSaveName)):
+            model = torch.load(modelSaveName)
+            print("Model loaded successfully!", model.parameters)
+            loadHistory()
+        else: #no model exists, train one up.
+            model = Net().to(device)
+            train(model)
 
-# plt.figure(figsize = (10,10))
-# cm = confusion_matrix(y.numpy(), y_pred.numpy(), normalize="true")
-# plt.matshow(cm, fignum=1)
+        if (option == '2'):
+            print("Fetching statistics...\n")
+            t_loss, t_acc = evaluate(model, test_loader)
+            print("Testing accuracy:\n", t_acc)
+            print("Testing loss:\n", t_loss)
+            plotData()
+            plotConfusionMatrix()
 
-# for (i, j), z in np.ndenumerate(cm):
-#     plt.text(j, i, '{:0.3f}'.format(z), ha='center', va='center')
-    
-# plt.xticks(range(8))
-# plt.yticks(range(8))
-# plt.xlabel("Prediction")
-# plt.ylabel("True")
+        if (option == '3'):
+            suboption = input("Enter the path to an image (q to exit)\n")
+            while (suboption != 'q'):
+                print(checkImage(suboption, model))
+                suboption = input("Enter the path to an image (q to exit)\n")
 
-# # We can retrieve the categories used by the LabelEncoder
-# classes = val_set.enc.classes_.tolist()
-# plt.gca().set_xticklabels(classes)
-# plt.gca().set_yticklabels(classes)
-
-# plt.title("Normalized Confusion Matrix")
-# plt.colorbar()
-# plt.show()
+    option = input("Please choose a number from below:\n1 : Train model\n2 : Statistics\n3 : Evaluate\n4 : Exit program")
