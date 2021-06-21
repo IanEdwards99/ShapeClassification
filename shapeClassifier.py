@@ -71,26 +71,27 @@ class Net(nn.Module):
         # create 6, 5x5 kernels
         # Pytorch does valid padding by default. 
         
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels = 6, kernel_size = 5)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels = 6, kernel_size = 3)
 
         # 2x2 max-pooling 
         self.pool = nn.MaxPool2d(2, 2)        
         # 6, 25x25 feature maps going out of the pooling stage 
         
-        self.conv2 = nn.Conv2d(in_channels=6, out_channels = 6, kernel_size = 5)
+        self.conv2 = nn.Conv2d(in_channels=6, out_channels = 16, kernel_size = 3)
         # output 16, 20x20 feature maps
-        self.conv3 = nn.Conv2d(in_channels=6, out_channels = 16, kernel_size = 5)
+        #self.conv3 = nn.Conv2d(in_channels=6, out_channels = 16, kernel_size = 5)
         # there will be another pooling stage in the forward pass before fc1
         # output 16, 10x10 feature maps 
         
-        self.fc1 = nn.Linear(16 * 21 * 21, 120)
+        self.fc1 = nn.Linear(16 * 49 * 49, 120)
         self.fc2 = nn.Linear(120, 32)
         self.fc3 = nn.Linear(32, 5)
 
     def forward(self, input):
         output = self.pool(F.relu(self.conv1(input)))
         output = self.pool(F.relu(self.conv2(output)))
-        output = self.pool(F.relu(self.conv3(output)))
+        print(output.shape)
+       # output = self.pool(F.relu(self.conv3(output)))
         output = output.view(output.size(0), -1)
         output = F.relu(self.fc1(output))
         output = F.relu(self.fc2(output))
