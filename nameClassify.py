@@ -2,9 +2,9 @@ import os
 import csv
 from PIL import Image
 
-path = './Extra Data/triangles/'
+path = './preprocessing/'
 savepath = './preprocessing/'
-classification = 'triangle_0'
+classification = 'triangle_00'
 i = 1
 for filename in os.listdir(path):
     img = Image.open(path + filename)

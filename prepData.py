@@ -11,7 +11,11 @@ shapeClass = {
     "Star" : 4,
     "circle" : 0,
     "square" : 2,
-    "triangle" : 1
+    "triangle" : 1,
+    "triange" : 1,
+    "sqaure" : 2,
+    "star" : 4,
+    "pentagon" : 3
 }
 
 f = open('shape_data.csv', 'w')
