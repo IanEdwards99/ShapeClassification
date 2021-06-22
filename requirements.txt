@@ -4,5 +4,5 @@ Pillow
 torchvision
 numpy
 scikit-learn
+scikit-image
 pandas
-python3-tk
