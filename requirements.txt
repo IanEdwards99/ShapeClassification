@@ -3,7 +3,6 @@ torch
 Pillow
 torchvision
 numpy
-sklearn
+scikit-learn
 pandas
 python3-tk
-sklearn

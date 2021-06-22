@@ -1,3 +1,6 @@
+#Author: Ian Edwards
+#Description: File to create custom dataset.
+
 #Reference: 
 #https://www.youtube.com/watch?v=ZoZHd0Zm3RY
 
@@ -13,7 +16,7 @@ class shapeDataset(Dataset):
     def __init__(self, csvfile, rootdir, transform = None):
         self.annotations = pd.read_csv(csvfile)
         self.rootdir = rootdir
-        self.transform = transform
+        self.transform = transform #inputted transform
 
     def __len__(self):
         return len(self.annotations) #54322
@@ -26,4 +29,4 @@ class shapeDataset(Dataset):
         if self.transform:
             img = self.transform(img)
         
-        return (img, y_label)
+        return (img, y_label) #output tensor

@@ -4,3 +4,4 @@
 *.ipynb
 *.ipynb_checkpoints/
 ./greyscale/
+__pycache__

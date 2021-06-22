@@ -1,5 +1,5 @@
 #Author: Ian Edwards
-
+#Description: Create .csv of annotations of data, according to image labels.
 import os
 import csv
 
