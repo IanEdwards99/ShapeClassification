@@ -17,3 +17,4 @@ The model loaded can be changed in shapeClassifier.py with saveModelName variabl
 When running shapeClassifier.py directly, one can input arguments such as batchsize, epochs and learning rate.
 Note: The model created is only as good as the data given to it.
 
+Possible dataset: https://drive.google.com/file/d/1w5XiUtJXmYU9gC7AVAzZYR42Adh9YSUI/view?usp=sharing
