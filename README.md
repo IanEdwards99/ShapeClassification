@@ -15,7 +15,8 @@ Instructions:
 Note:
 The UI allows one to train a new model, see statistics for a loaded model or evaluate a model by passing in paths to images to be classified.
 In this example, the dataset used the is the one shown bellow:
-Possible dataset: https://drive.google.com/file/d/1w5XiUtJXmYU9gC7AVAzZYR42Adh9YSUI/view?usp=sharing .
+Possible dataset: https://drive.google.com/file/d/1w5XiUtJXmYU9gC7AVAzZYR42Adh9YSUI/view?usp=sharing 
+
 With the location of the dataset being "./greayscale'
 
 The model loaded can be changed in shapeClassifier.py with saveModelName variable.
