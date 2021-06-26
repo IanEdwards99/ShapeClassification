@@ -8,7 +8,7 @@ A CNN to classify different types of basic shapes.
 Instructions:
 1) Install requirements and environment with:
 "make install"
-2) Run with "make classifier"
+2) Run with "make classify"
 
 Note:
 The UI allows one to train a new model, see statistics for a loaded model or evaluate a model by passing in paths to images to be classified.
